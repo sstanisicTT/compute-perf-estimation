@@ -51,7 +51,7 @@ accumulate the overhead of entering a zone quickly. This would then impact the m
 
 ## Test Benchmark Setup
 
-The overhead measurements are based on a comprehensive benchmark suite consisting of 8 different test cases:
+Test benchmark for measuring overhead introduced by inserting zone is created based on a comprehensive suite consisting of 8 different test cases:
 
 ```
 pytest tests/ttnn/nightly/unit_tests/operations/conv/test_conv2d.py -k test_conv_features_multi_device
@@ -65,8 +65,8 @@ pytest tests/ttnn/unit_tests/operations/pool/test_maxpool2d.py
 ```
 
 Each test is executed 30 times (runs 0-30) to ensure statistical significance. The overhead is
-measured by comparing kernel length performance between the baseline implementation and
-instrumented versions (profiler vs counter approaches).
+measured by comparing kernel length between the baseline implementation and
+instrumented versions (profiler vs novel counter approaches).
 
 ## Measurements for proof:
 
@@ -126,7 +126,7 @@ inline void llk_wait_for_free_tiles(const std::int32_t operand, const std::int32
 ```
 
 
-Insteadx of trying to calculate the exact number of cycles, just count the number of extra
+Instead of trying to calculate the exact number of cycles, just count the number of extra
 iterations spent inside of the loop that waits for Data Movement.
 
 This would simplify the algorithm to the following:
@@ -154,9 +154,8 @@ PROFILER vs BASELINE:
     Median Slowdown:  1.304%
 ```
 
-From the counter value we can calculate the number of cycles spent inside of the loop. We can find
-the number of cycles per loop by looking at the disassembly and manually counting the cycles or
-by comparing the output of a profiler zone to the output of the counter as separate runs.
+Counter value represents the number of loop cycles. We can find number of instructions(and number of clock cycles required to execute those instructions) per loop cycle by looking at the disassembly and manually counting or
+by comparing the output of a profiler zone to the output of the counter as separate runs. Once we know number of loop cycles and number of clock cycles required for one loop cycle we can easily calcualte total waiting time in blocking CB calls: `cb_wait_front` and `cb_reserve_back`.
 
 ### Cycle Calculation Methods
 
@@ -180,6 +179,7 @@ sw   s4,0(t3)        # outside of loop
 Total per loop
 
 **Method 2: Profiler Calibration**
+
 Run the same kernel with both profiler zones and counters enabled separately:
 
 ```
@@ -197,7 +197,10 @@ inline void llk_wait_for_free_tiles(const std::int32_t operand, const std::int32
     } while (free_tiles < num_tiles);
 
     STORE_COUNTER(--counter);           // Store counter (1 cycle)
+
+    // .....
 }
+```
 
 ```
 inline void llk_wait_for_free_tiles(const std::int32_t operand, const std::int32_t num_tiles) {
@@ -217,12 +220,12 @@ inline void llk_wait_for_free_tiles(const std::int32_t operand, const std::int32
 ```
 
 
-### Geek Numbers
+## Geek Numbers
 
 Numbers are measured over 8 different tests, repeated 30 times. The slowdown is calculated for
 each measurement compared to baseline and averaged.
 
-Wormhole overhead measurements:
+### Wormhole overhead measurements:
 ```
 COUNTER vs BASELINE:
   KERNEL_LENGTH Performance Impact:
@@ -237,7 +240,8 @@ PROFILER vs BASELINE:
     Median Slowdown:  1.304%
 ```
 
-Wormhole standard deviation:
+### Wormhole KERNEL_LENGTH statistics
+KERNEL_LENGTH standard deviation for each test(based on 30 runs) is expressed in percentage and detailed statistic of STD(over all 8 tests) is calculated to compare order of average slowdown with STD margins:
 ```
 BASELINE
 STD Percentage statistics:
@@ -267,7 +271,7 @@ STD Percentage statistics:
     75th percentile: 2.0290%
 ```
 
-Maxpool Wormhole:
+### Maxpool overhead on Wormhole(worst case test):
 ```
 COUNTER vs BASELINE:
 KERNEL_LENGTH Performance Impact:
@@ -282,7 +286,7 @@ KERNEL_LENGTH Performance Impact:
     Median Slowdown:  3.100%
 ```
 
-Blackhole:
+### Blackhole overhead measurements:
 ```
 COUNTER vs BASELINE:
 KERNEL_LENGTH Performance Impact:
@@ -297,7 +301,8 @@ KERNEL_LENGTH Performance Impact:
     Median Slowdown:  0.872%
 ```
 
-Blackhole standard deviation:
+### Blackhole KERNEL_LENGTH statistics
+KERNEL_LENGTH standard deviation for each test(based on 30 runs) is expressed in percentage and detailed statistic of STD(over all 8 tests) is calculated to compare order of average slowdown with STD margins:
 ```
 BASELINE
 STD Percentage statistics:
