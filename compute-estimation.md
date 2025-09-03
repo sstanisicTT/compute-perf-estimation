@@ -176,7 +176,7 @@ bltu a5,a2,5e68      # 1 cycle (2 if the branch is misspredicted)
 sw   s4,0(t3)        # outside of loop
 ```
 
-Total per loop
+Total per loop: 7 cycles
 
 **Method 2: Profiler Calibration**
 
@@ -218,6 +218,9 @@ inline void llk_wait_for_free_tiles(const std::int32_t operand, const std::int32
     // ...
 }
 ```
+
+Now we can approximate:
+`CYCLES_PER_COUNTER = ZONE_CYCLES / COUNTER_VALUE`
 
 
 ## Geek Numbers
